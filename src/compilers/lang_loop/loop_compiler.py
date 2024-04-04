@@ -28,11 +28,11 @@ def compileStmts(stmts: list[stmt]) -> list[WasmInstr]:
     for stmt in stmts:
         match stmt:
             case StmtExp(e):
-                instrs=instrs+compileExp(e)
+                instrs+=compileExp(e)
             case Assign(x, e):
-                instrs=instrs+compileExp(e)+[WasmInstrVarLocal(op='set', id=WasmId(id=f'${x.name}'))]
+                instrs+=compileExp(e)+[WasmInstrVarLocal(op='set', id=WasmId(id=f'${x.name}'))]
             case IfStmt(cond, tb, eb):
-                pass
+                instrs+=compileExp(cond)+[WasmInstrIf(resultType='i32', thenInstrs=compileStmts(tb)+[WasmInstrConst(ty='i32', val=0)], elseInstrs=compileStmts(eb)+[WasmInstrConst(ty='i32', val=0)])]+[WasmInstrDrop()]
             case WhileStmt(cond, b):
                 pass
 
@@ -43,7 +43,11 @@ def compileExp(exp: exp) -> list[WasmInstr]:
         case IntConst(n):
             return [WasmInstrConst(ty='i64', val=n)]
         case BoolConst(n):
-            return [WasmInstrConst(ty='i32', val=n)]
+            match n:
+                case True:
+                    return [WasmInstrConst(ty='i32', val=1)]
+                case False:
+                    return [WasmInstrConst(ty='i32', val=0)]
         case Name(x):
             return [WasmInstrVarLocal(op='get', id=WasmId(id=f'${x.name}'))]
         case Call(x, args):
@@ -51,29 +55,64 @@ def compileExp(exp: exp) -> list[WasmInstr]:
             for e in args:
                 a=a+compileExp(e)
             if 'print' in x.name:
-                name: str='print_i64'
+                match tyOfExp(args[0]):
+                    case Bool():
+                        name: str='$print_i64'
+                    case Int():
+                        name: str='$print_i64'
             elif 'input' in x.name:
-                name: str='input_i64'
+                name: str='$input_i64'
             else:
                 name: str=x.name
-            a=a+[WasmInstrCall(id=WasmId(id=f'${name}'))]
+            a=a+[WasmInstrCall(id=WasmId(id=name))]
             return a
-        case UnOp(_, arg):
-            return [WasmInstrConst(ty='i64', val=0)]+compileExp(arg)+[WasmInstrNumBinOp(ty='i64', op='sub')]
+        case UnOp(op, arg):
+            match op:
+                case USub():
+                    return [WasmInstrConst(ty='i64', val=0)]+compileExp(arg)+[WasmInstrNumBinOp(ty='i64', op='sub')]
+                case Not():
+                    return compileExp(arg)+[WasmInstrConst(ty='i32', val=0), WasmInstrIntRelOp(ty='i32', op='eq')]
         case BinOp(left, op, right):
-            if type(op)==Add:
-                wasmOP: str='add'
-            elif type(op)==Sub:
-                wasmOP: str='sub'
-            else:
-                wasmOP:str='mul'
-            return compileExp(left)+compileExp(right)+[WasmInstrNumBinOp(ty='i64', op=wasmOP)]
+            match op:
+                case Add():
+                    return compileExp(left)+compileExp(right)+[WasmInstrNumBinOp(ty='i64', op='add')]
+                case Sub():
+                    return compileExp(left)+compileExp(right)+[WasmInstrNumBinOp(ty='i64', op='sub')]
+                case Mul():
+                    return compileExp(left)+compileExp(right)+[WasmInstrNumBinOp(ty='i64', op='mul')]
+                case Less():
+                    return compileExp(left)+compileExp(right)+[WasmInstrIntRelOp(ty='i64', op='lt_s')]
+                case LessEq():
+                    return compileExp(left)+compileExp(right)+[WasmInstrIntRelOp(ty='i64', op='le_s')]
+                case Greater():
+                    return compileExp(left)+compileExp(right)+[WasmInstrIntRelOp(ty='i64', op='gt_s')]
+                case GreaterEq():
+                    return compileExp(left)+compileExp(right)+[WasmInstrIntRelOp(ty='i64', op='ge_s')]
+                case Eq():
+                    match tyOfExp(left):
+                        case Bool():
+                            return compileExp(left)+compileExp(right)+[WasmInstrIntRelOp(ty='i32', op='eq')]
+                        case Int():
+                            return compileExp(left)+compileExp(right)+[WasmInstrIntRelOp(ty='i64', op='eq')]
+                case NotEq():
+                    match tyOfExp(left):
+                        case Bool():
+                            return compileExp(left)+compileExp(right)+[WasmInstrIntRelOp(ty='i32', op='ne')]
+                        case Int():
+                            return compileExp(left)+compileExp(right)+[WasmInstrIntRelOp(ty='i64', op='ne')]
+                case And():
+                    return compileExp(left)+[WasmInstrIf(resultType='i32', thenInstrs=compileExp(right), elseInstrs=[WasmInstrConst(ty='i32', val=0)])]
+                case Or():
+                    return compileExp(left)+[WasmInstrIf(resultType='i32', thenInstrs=[WasmInstrConst(ty='i32', val=1)], elseInstrs=compileExp(right))]
 
 def identToWasmId(id: Ident) -> WasmId:
     return WasmId(id=f'${id.name}')
 
 def tyOfExp(e: exp) -> ty:
-    if e.ty!=None:
-        return e.ty
-    else:
-        raise CompileError.typeError(f'')
+    match e.ty:
+        case None:
+            raise ValueError
+        case Void():
+            raise ValueError
+        case NotVoid(rty):
+            return rty
