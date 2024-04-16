@@ -34,7 +34,7 @@ def compileStmts(stmts: list[stmt]) -> list[WasmInstr]:
             case IfStmt(cond, tb, eb):
                 instrs+=compileExp(cond)+[WasmInstrIf(resultType='i32', thenInstrs=compileStmts(tb)+[WasmInstrConst(ty='i32', val=0)], elseInstrs=compileStmts(eb)+[WasmInstrConst(ty='i32', val=0)])]+[WasmInstrDrop()]
             case WhileStmt(cond, b):
-                pass
+                instrs+=compileWhile(cond, b)
 
     return instrs
 
@@ -104,6 +104,16 @@ def compileExp(exp: exp) -> list[WasmInstr]:
                     return compileExp(left)+[WasmInstrIf(resultType='i32', thenInstrs=compileExp(right), elseInstrs=[WasmInstrConst(ty='i32', val=0)])]
                 case Or():
                     return compileExp(left)+[WasmInstrIf(resultType='i32', thenInstrs=[WasmInstrConst(ty='i32', val=1)], elseInstrs=compileExp(right))]
+                
+def compileWhile(cond: exp, body: list[stmt]) -> list[WasmInstr]:
+    instrs : list[WasmInstr]=[]
+
+    start_label= WasmId('$loop_start')
+    end_label=WasmId('$loop_end')
+
+    instrs+=[WasmInstrBlock(label=end_label, result=None, body=[WasmInstrLoop(label=start_label, body=compileExp(cond)+[WasmInstrIf(resultType='i32', thenInstrs=compileStmts(body)+[WasmInstrBranch(target=start_label, conditional=False)], elseInstrs=[WasmInstrBranch(target=end_label, conditional=False)]), WasmInstrDrop()])])]
+
+    return instrs
 
 def identToWasmId(id: Ident) -> WasmId:
     return WasmId(id=f'${id.name}')
