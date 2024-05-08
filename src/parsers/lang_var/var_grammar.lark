@@ -2,21 +2,28 @@
 %ignore WS_INLINE
 %ignore SH_COMMENT
 
-INT: /[0-9]+/
-WS: /[ \t\f\r\n]/+
-%ignore WS
+// INT: /[0-9]+/
+// WS: /[ \t\f\r\n]/+
+// %ignore WS
 
 exp_2: INT             -> int_exp
+     | "-" exp_2       -> neg_exp
+     | variable
+     | function_call
      | "(" exp ")"     -> paren_exp
 
 exp_1: exp_1 "*" exp_2 -> mul_exp
      | exp_2           -> exp_2
 
 exp: exp "+" exp_1    -> add_exp
+   | exp "-" exp_1    -> sub_exp
    | exp_1            -> exp_1
+   
+function_call: CNAME "(" (exp ("," exp)*)? ")" -> function_call
 
-stmt: exp | CNAME
+variable: CNAME          -> var_exp
 
-stmts: stmt+
+stmt: variable "=" exp NEWLINE  -> var_assign_stmt
+    | exp NEWLINE               -> exp_stmt
 
-lvar: stmts
+lvar: NEWLINE* stmt+        -> stmt_list

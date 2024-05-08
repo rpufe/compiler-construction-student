@@ -32,7 +32,7 @@ def ruleEntryList(toks: TokenStream) -> dict[str, Json]:
             else:
                 _=toks.next()
         _=toks.next()
-        return result
+        return result # type: ignore
 
 def ruleEntry(toks: TokenStream) -> tuple[str, Json]:
     s=toks.ensureNext('STRING')[1:-1]
