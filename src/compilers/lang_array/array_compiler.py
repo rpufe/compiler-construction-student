@@ -89,7 +89,7 @@ def compileExp(e: exp | AtomExp, cfg: CompilerConfig) -> list[WasmInstr]:
             wasm_instrs.append(WasmInstrVarLocal('set', WasmId('$@tmp_i32')))
             loop_label_start = WasmId('$loop_start')
             loop_label_exit = WasmId('$loop_exit')
-            if type(tyOfExp(e)) == Array:
+            if type(tyOfExp(e)) == Array or type(tyOfExp(e)) == Bool:
                 store_command = WasmInstrMem('i32', 'store')
             else:
                 store_command = WasmInstrMem('i64', 'store')
