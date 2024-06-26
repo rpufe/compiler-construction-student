@@ -17,8 +17,7 @@ def colorInterfGraph(g: InterfGraph, secondaryOrder: dict[tac.ident, int]={},
                      maxRegs: int=MAX_REGISTERS) -> RegisterMap:
     """
     Given an interference graph, computes a register map mapping a TAC variable
-    to a TACspill variable. You have to implement the "simple graph coloring algorithm"
-    from slide 58 here.
+    to a TACspill variable. Implements the graph coloring algorithm with spilling.
 
     - Parameter maxRegs is the maximum number of registers we are allowed to use.
     - Parameter secondaryOrder is used by the tests to get deterministic results even
@@ -28,61 +27,44 @@ def colorInterfGraph(g: InterfGraph, secondaryOrder: dict[tac.ident, int]={},
     colors: dict[tac.ident, int] = {}
     forbidden: dict[tac.ident, set[int]] = {}
     q = PrioQueue(secondaryOrder)
-    
-    # for v in g.vertices:
-    #     degree = len(g.succs(v))
-    #     q.push(v, degree)
-    
-    # while not q.isEmpty():
-    #     x = q.pop()
-    #     forbidden[x] = set()
-
-    #     for neighbor in g.succs(x):
-    #         if neighbor in colors:
-    #             forbidden[x].add(colors[neighbor])
-
-    #     chosen_color = chooseColor(x, forbidden, maxRegs)
-    #     if chosen_color >= maxRegs:
-    #         chosen_color = maxRegs + len(colors)
-        
-    #     colors[x] = chosen_color
-
-    #     for neighbor in g.succs(x):
-    #         if neighbor not in forbidden:
-    #             forbidden[neighbor] = set()
-    #         forbidden[neighbor].add(chosen_color)
 
     spillStack: list[tac.ident] = []
 
-    # Step 2: Push all nodes into the priority queue with priority based on their degree
+    # print()
+
     for v in g.vertices:
         degree = len(g.succs(v))
         q.push(v, degree)
     
-    # Step 3: Simplify phase - process nodes in order of decreasing degree
     while not q.isEmpty():
         x = q.pop()
         forbidden[x] = set()
 
-        # Update forbidden colors based on neighbors' colors
+        # print(f'X: {x}')
         for neighbor in g.succs(x):
+            # print(f'Neighbor: {neighbor}')
+            # print(f'Colors 0: {colors}')
             if neighbor in colors:
                 forbidden[x].add(colors[neighbor])
 
-        # Choose the lowest possible color that is not forbidden
         chosen_color = chooseColor(x, forbidden, maxRegs)
         
         if chosen_color >= maxRegs:
-            # Spill logic: mark this variable to be spilled
             spillStack.append(x)
         else:
             colors[x] = chosen_color
 
-    # Step 4: Handle spills by assigning spill slots
+    
+    # print(f'SpillStack: {spillStack}')
+    # print(f'Forbidden: {forbidden}')
+    # print(f'Colors 1: {colors}')
+
     spillOffset = maxRegs
     for x in spillStack:
         colors[x] = spillOffset
         spillOffset += 1
+
+    # print(f'Colors 2: {colors}')
 
     m = RegisterAllocMap(colors, maxRegs)
     return m

@@ -22,6 +22,7 @@ def instrUse(instr: tac.instr) -> set[tac.ident]:
             uses.update(_primUses(instr.left.p))
         else:
             uses.update(_primUses(instr.left.left))
+            uses.update(_primUses(instr.left.right))
     elif isinstance(instr, tac.Call):
         uses.add(instr.name)
         for arg in instr.args:
@@ -37,7 +38,6 @@ def _primUses(prim: tac.prim) -> set[tac.ident]:
     if isinstance(prim, tac.Name):
         return {prim.var}
     return set()
-
 
 # Each individual instruction has an identifier. This identifier is the tuple
 # (index of basic block, index of instruction inside the basic block)
