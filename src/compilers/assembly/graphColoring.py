@@ -28,43 +28,20 @@ def colorInterfGraph(g: InterfGraph, secondaryOrder: dict[tac.ident, int]={},
     forbidden: dict[tac.ident, set[int]] = {}
     q = PrioQueue(secondaryOrder)
 
-    spillStack: list[tac.ident] = []
-
-    # print()
-
     for v in g.vertices:
-        degree = len(g.succs(v))
-        q.push(v, degree)
+        q.push(v)
     
     while not q.isEmpty():
         x = q.pop()
         forbidden[x] = set()
 
-        # print(f'X: {x}')
         for neighbor in g.succs(x):
-            # print(f'Neighbor: {neighbor}')
-            # print(f'Colors 0: {colors}')
             if neighbor in colors:
                 forbidden[x].add(colors[neighbor])
 
         chosen_color = chooseColor(x, forbidden, maxRegs)
         
-        if chosen_color >= maxRegs:
-            spillStack.append(x)
-        else:
-            colors[x] = chosen_color
-
-    
-    # print(f'SpillStack: {spillStack}')
-    # print(f'Forbidden: {forbidden}')
-    # print(f'Colors 1: {colors}')
-
-    spillOffset = maxRegs
-    for x in spillStack:
-        colors[x] = spillOffset
-        spillOffset += 1
-
-    # print(f'Colors 2: {colors}')
+        colors[x] = chosen_color
 
     m = RegisterAllocMap(colors, maxRegs)
     return m

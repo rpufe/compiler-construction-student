@@ -9,35 +9,35 @@ def instrDef(instr: tac.instr) -> set[tac.ident]:
     if isinstance(instr, tac.Assign):
         return {instr.var}
     elif isinstance(instr, tac.Call):
-        return {instr.var} if instr.var else set()
+        if instr.name.name == "$input_i64":
+            var: Optional[tac.ident] = instr.var
+            if var is not None:
+                return {var}
+        return set()
     return set()
 
 def instrUse(instr: tac.instr) -> set[tac.ident]:
     """
-    Returns the set of identifiers used by some instrucution.
+    Returns the set of identifiers used by some instruction.
     """
     uses: set[tac.ident] = set()
     if isinstance(instr, tac.Assign):
         if isinstance(instr.left, tac.Prim):
-            uses.update(_primUses(instr.left.p))
+            if isinstance(instr.left.p, tac.Name):
+                uses.add(instr.left.p.var)
         else:
-            uses.update(_primUses(instr.left.left))
-            uses.update(_primUses(instr.left.right))
+            if isinstance(instr.left.left, tac.Name):
+                uses.add(instr.left.left.var)
+            if isinstance(instr.left.right, tac.Name):
+                uses.add(instr.left.right.var)
     elif isinstance(instr, tac.Call):
-        uses.add(instr.name)
         for arg in instr.args:
-            uses.update(_primUses(arg))
+            if isinstance(arg, tac.Name):
+                uses.add(arg.var)
     elif isinstance(instr, tac.GotoIf):
-        uses.update(_primUses(instr.test))
+        if isinstance(instr.test, tac.Name):
+            uses.add(instr.test.var)
     return uses
-
-def _primUses(prim: tac.prim) -> set[tac.ident]:
-    """
-    Helper function to extract identifiers used in a prim type.
-    """
-    if isinstance(prim, tac.Name):
-        return {prim.var}
-    return set()
 
 # Each individual instruction has an identifier. This identifier is the tuple
 # (index of basic block, index of instruction inside the basic block)
@@ -109,13 +109,18 @@ class InterfGraphBuilder:
         You should implement the algorithm specified on the slide
         "Computing the interference graph" (slide 50) here.
         """
-        live = self.before[instrId] | self.after[instrId]
+
+        live = self.after[instrId]
         defs = instrDef(instr)
         for d in defs:
             if not interfG.hasVertex(d):
                 interfG.addVertex(d, None)
             for v in live:
-                if v != d:
+                if isinstance(instr, tac.Assign):
+                    if isinstance(instr.left, tac.Prim) and isinstance(instr.left.p, tac.Name):
+                        if instr.var == d and instr.left.p.var == v:
+                            continue
+                if d != v:
                     if not interfG.hasVertex(v):
                         interfG.addVertex(v, None)
                     interfG.addEdge(d, v)

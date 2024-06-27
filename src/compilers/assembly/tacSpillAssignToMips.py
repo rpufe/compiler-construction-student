@@ -41,18 +41,6 @@ def assignToMips(i: tacSpill.Assign) -> list[mips.instr]:
                 return mips.Sub()
             case 'MUL':
                 return mips.Mul()
-            # case '<':
-            #     return mips.Less()
-            # case '<=':
-            #     return mips.LessEq()
-            # case '>':
-            #     return mips.Greater()
-            # case '>=':
-            #     return mips.GreaterEq()
-            # case '==':
-            #     return mips.Eq()
-            # case '!=':
-            #     return mips.NotEq()
             case _:
                 raise ValueError(f"Value Error: {op.name}")
             
@@ -60,8 +48,6 @@ def assignToMips(i: tacSpill.Assign) -> list[mips.instr]:
         match op.name:
             case 'ADD':
                 return mips.AddI()
-            # case '<':
-            #     return mips.LessI()
             case _:
                 raise ValueError(f"Value Error: {op.name}")
 
