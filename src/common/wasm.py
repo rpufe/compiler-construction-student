@@ -121,6 +121,17 @@ class WasmData:
 @dataclass(frozen=True)
 class WasmFuncTable:
     elems: list[WasmId]
+
+    def get_func_by_index(self, index: int) -> WasmId:
+        if index < 0 or index >= len(self.elems):
+            raise IndexError(f'Index {index} out of bounds for function table')
+        return self.elems[index]
+    
+    def get_index_of_func(self, id: WasmId) -> int:
+        if id not in self.elems:
+            raise IndexError(f'WasmId {id} not in function table')
+        return self.elems.index(id)
+    
     def render(self):
         ids = [i.render() for i in self.elems]
         return mkNamedSeq('table', SExpId('funcref'), mkNamedSeq('elem', *ids))
